@@ -112,25 +112,23 @@ if __name__=="__main__":
                     print(input_pose)
                     if _id not in queue_map.keys():
                         queue_map[_id]=[]
-
-                    for id_name in queue_map.keys():
                         
-                        data_ = queue_map[id_name]
+                    data_ = queue_map[_id]
                         
-                        if(len(data_)==100):
-                            data_[0:99] = data_[1:100]
-                            data_[99] = input_pose
-                        else:
-                            data_.append(input_pose)
+                    if(len(data_)==100):
+                        data_[0:99] = data_[1:100]
+                        data_[99] = input_pose
+                    else:
+                        data_.append(input_pose)
                     
                     # 改到這確認不是thread的問題
-                    for _id,queue in queue_map.items():
+                    queue = queue_map[_id]
                         
-                        if len(queue)==100:
+                    if len(queue)==100:
                            
-                            poses = np.array(queue)
+                        poses = np.array(queue)
                             # start_time = time.time()
-                            result = model.sample(poses)
+                        result = model.sample(poses)
                             # end_time = time.time()
                             # header = [end_time-start_time]
                             
@@ -138,7 +136,7 @@ if __name__=="__main__":
                             # print("Output")
                             # print(_id)
                             # print(result[0])
-                            sending(conn,_id,result)
+                        sending(conn,_id,result)
 
 
 
