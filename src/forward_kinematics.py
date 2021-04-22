@@ -164,19 +164,21 @@ def main():
     expmap_pred = h5f['expmap/preds/walking_0'][:]
 
   nframes_gt, nframes_pred = expmap_gt.shape[0], expmap_pred.shape[0]
-
+  print( nframes_gt)
   # Put them together and revert the coordinate space
   expmap_all = revert_coordinate_space( np.vstack((expmap_gt, expmap_pred)), np.eye(3), np.zeros(3) )
+  tmp = np.array(expmap_all)
+  print("here: ",tmp.shape)
   expmap_gt   = expmap_all[:nframes_gt,:]
   expmap_pred = expmap_all[nframes_gt:,:]
-
+  
   # Compute 3d points for each frame
   xyz_gt, xyz_pred = np.zeros((nframes_gt, 96)), np.zeros((nframes_pred, 96))
   for i in range( nframes_gt ):
     xyz_gt[i,:] = fkl( expmap_gt[i,:], parent, offset, rotInd, expmapInd )
   for i in range( nframes_pred ):
     xyz_pred[i,:] = fkl( expmap_pred[i,:], parent, offset, rotInd, expmapInd )
-
+  
   # === Plot and animate ===
   fig = plt.figure()
   ax = plt.gca(projection='3d')

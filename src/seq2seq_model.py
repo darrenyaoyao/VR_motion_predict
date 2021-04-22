@@ -5,11 +5,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+
 #from tensorflow.python.ops import array_ops
 #from tensorflow.python.ops import variable_scope as vs
 
 import random
-
+import csv
 import numpy as np
 import os
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -20,6 +21,9 @@ import torch.nn.functional as F
 import data_utils
 
 use_cuda=True
+
+
+
 
 class Seq2SeqModel(nn.Module):
   """Sequence-to-sequence model for human motion prediction"""
@@ -64,7 +68,7 @@ class Seq2SeqModel(nn.Module):
     """
     super(Seq2SeqModel, self).__init__()
 
-    self.HUMAN_SIZE = 54
+    self.HUMAN_SIZE = 18
     self.input_size = self.HUMAN_SIZE + number_of_actions if one_hot else self.HUMAN_SIZE
 
     print( "One hot is ", one_hot )
@@ -84,7 +88,7 @@ class Seq2SeqModel(nn.Module):
 #    self.cell2 = torch.nn.GRUCell(self.rnn_size, self.rnn_size)
 
     self.fc1 = nn.Linear(self.rnn_size, self.input_size)
-
+    
 
   def forward(self, encoder_inputs, decoder_inputs):
     def loop_function(prev, i):
@@ -101,11 +105,10 @@ class Seq2SeqModel(nn.Module):
      #   state2 = state2.cuda()
     for i in range(self.source_seq_len-1):
         state = self.cell(encoder_inputs[i], state)
-#        state2 = self.cell2(state, state2)
         state = F.dropout(state, self.dropout, training=self.training)
         if use_cuda:
             state = state.cuda()
-#            state2 = state2.cuda()
+
 
     outputs = []
     prev = None
@@ -204,9 +207,10 @@ class Seq2SeqModel(nn.Module):
     idx.append( rng.randint( 16,T2-prefix-suffix ))
     idx.append( rng.randint( 16,T1-prefix-suffix ))
     idx.append( rng.randint( 16,T2-prefix-suffix ))
+    # 8 個!!!
     return idx
 
-  def get_batch_srnn(self, data, action ):
+  def get_batch_srnn(self, data, action, decode_ouput = True ):
     """
     Get a random batch of data from the specified bucket, prepare for step.
 
@@ -227,36 +231,46 @@ class Seq2SeqModel(nn.Module):
       raise ValueError("Unrecognized action {0}".format(action))
 
     frames = {}
-    frames[ action ] = self.find_indices_srnn( data, action )
+    # frames[ action ] = self.find_indices_srnn( data, action )
 
     batch_size = 8 # we always evaluate 8 seeds
     subject    = 5 # we always evaluate on subject 5
     source_seq_len = self.source_seq_len
     target_seq_len = self.target_seq_len
 
-    seeds = [( action, (i%2)+1, frames[action][i] ) for i in range(batch_size)]
+    # seeds = [( action, (i%2)+1, frames[action][i] ) for i in range(batch_size)]
 
     encoder_inputs  = np.zeros( (batch_size, source_seq_len-1, self.input_size), dtype=float )
     decoder_inputs  = np.zeros( (batch_size, target_seq_len, self.input_size), dtype=float )
-    decoder_outputs = np.zeros( (batch_size, target_seq_len, self.input_size), dtype=float )
-
+    if(decode_ouput):
+      decoder_outputs = np.zeros( (batch_size, target_seq_len, self.input_size), dtype=float )
+    # print("input:",self.input_size)
     # Compute the number of frames needed
     total_frames = source_seq_len + target_seq_len
 
     # Reproducing SRNN's sequence subsequence selection as done in
     # https://github.com/asheshjain399/RNNexp/blob/master/structural_rnn/CRFProblems/H3.6m/processdata.py#L343
-    for i in xrange( batch_size ):
+    for i in xrange(1):
 
-      _, subsequence, idx = seeds[i]
-      idx = idx + 50
+      # _, subsequence, idx = seeds[i]
+      idx = 50
+    
 
-      data_sel = data[ (subject, action, subsequence, 'even') ]
-
+      data_sel = data[ (subject, action, 1, 'even') ]
+      
       data_sel = data_sel[(idx-source_seq_len):(idx+target_seq_len) ,:]
-
+      # print("data_sel",data_sel.shape)
       encoder_inputs[i, :, :]  = data_sel[0:source_seq_len-1, :]
       decoder_inputs[i, :, :]  = data_sel[source_seq_len-1:(source_seq_len+target_seq_len-1), :]
-      decoder_outputs[i, :, :] = data_sel[source_seq_len:, :]
+      # print("begin: ",source_seq_len-1)
+      # print("end: ",source_seq_len+target_seq_len-1)
+      
+      if(decode_ouput):
+        decoder_outputs[i, :, :] = data_sel[source_seq_len:, :]
 
+      
+    if(decode_ouput):
+      return encoder_inputs, decoder_inputs, decoder_outputs
+    else:
+      return encoder_inputs, decoder_inputs
 
-    return encoder_inputs, decoder_inputs, decoder_outputs

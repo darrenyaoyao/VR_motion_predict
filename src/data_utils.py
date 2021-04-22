@@ -207,7 +207,7 @@ def readCSVasFloat(filename):
   for line in lines:
     line = line.strip().split(',')
     if len(line) > 0:
-      returnArray.append(np.array([np.float32(x) for x in line]))
+      returnArray.append(np.array([np.float32(x) for x in line[:-1]]))
 
   returnArray = np.array(returnArray)
   return returnArray
@@ -232,6 +232,7 @@ def load_data(path_to_dataset, subjects, actions, one_hot):
 
   trainData = {}
   completeData = []
+  print(subjects)
   for subj in subjects:
     for action_idx in np.arange(len(actions)):
 
@@ -241,10 +242,13 @@ def load_data(path_to_dataset, subjects, actions, one_hot):
 
         print("Reading subject {0}, action {1}, subaction {2}".format(subj, action, subact))
 
-        filename = '{0}/S{1}/{2}_{3}.txt'.format( path_to_dataset, subj, action, subact)
+        filename = '{0}/S{1}/IRL_{2}_{3}.txt'.format( path_to_dataset, subj, action, subact)
         action_sequence = readCSVasFloat(filename)
 
         n, d = action_sequence.shape
+
+        print(action_sequence.shape)
+        
         even_list = range(0, n, 2)
 
         if one_hot:
@@ -253,8 +257,11 @@ def load_data(path_to_dataset, subjects, actions, one_hot):
           the_sequence[ :, 0:d ] = action_sequence[even_list, :]
           the_sequence[ :, d+action_idx ] = 1
           trainData[(subj, action, subact, 'even')] = the_sequence
+          
         else:
           trainData[(subj, action, subact, 'even')] = action_sequence[even_list, :]
+          
+          
 
 
         if len(completeData) == 0:
@@ -292,7 +299,7 @@ def normalize_data( data, data_mean, data_std, dim_to_use, actions, one_hot ):
   else:
     # TODO hard-coding 99 dimensions for un-normalized human poses
     for key in data.keys():
-      data_out[ key ] = np.divide( (data[key][:, 0:99] - data_mean), data_std )
+      data_out[ key ] = np.divide( (data[key][:, 0:18] - data_mean), data_std )
       data_out[ key ] = data_out[ key ][ :, dim_to_use ]
       data_out[ key ] = np.hstack( (data_out[key], data[key][:,-nactions:]) )
 
