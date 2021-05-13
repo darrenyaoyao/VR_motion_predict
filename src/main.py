@@ -53,30 +53,32 @@ def sending(s,_id,result):
         print("sending result error!")
         
 
-# class MLService(threading.Thread):
-#     def __init__(self,s,queue_map,model):
-#         threading.Thread.__init__(self,name="mlservice")
-#         self.s=s
-#         self.queue_map = queue_map
-#         self.model=model
-#         self.doRun= True
+class MLService(threading.Thread):
+    def __init__(self,s,queue_map,model):
+        threading.Thread.__init__(self,name="mlservice")
+        self.s=s
+        self.queue_map = queue_map
+        self.model=model
+        self.doRun= True
     
-#     def run(self):
-#         print("ML running!!\n")
-#         while self.doRun:
-#             if(len(self.queue_map)==2):
-#                 for _id,queue in self.queue_map.items():
-#                     print("ml _id: ",_id,", length: ",len(queue))
-#                     if len(queue)==100:
-#                         print("full!!!!!!!!!!!")
-#                         poses = np.array(queue)
-#                         # start_time = time.time()
-#                         result = self.model.sample(poses)
-#                         # end_time = time.time()
-#                         # header = [end_time-start_time]
+    def run(self):
+        print("ML running!!\n")
+        while self.doRun:
+            if(len(self.queue_map)==2):
+                for _id,queue in self.queue_map.items():
+                    print("ml _id: ",_id,", length: ",len(queue))
+                    if len(queue)==100:
+                        print("full!!!!!!!!!!!")
+                        poses = np.array(queue)
+                        # start_time = time.time()
+                        # result = poses[0:25]
+                        result = self.model.sample(poses)
+                        # print("result shape:",result.shape)
+                        # end_time = time.time()
+                        # header = [end_time-start_time]
                         
-#                         # print(result.shape)
-#                         sending(self.s,_id,result)
+                        # print(result.shape)
+                        sending(self.s,_id,result)
 
 if __name__=="__main__":
     # create  model
@@ -99,8 +101,8 @@ if __name__=="__main__":
             conn, addr = s.accept()
             print(addr[0] + 'connect!!')
 
-            # mlservice = MLService(conn,queue_map,model)
-            # mlservice.start()
+            mlservice = MLService(conn,queue_map,model)
+            mlservice.start()
             #handle one client!!
             while True:
                 try:
@@ -109,7 +111,7 @@ if __name__=="__main__":
                     _id, input_pose = receivepacket(conn)
                     print("Input ")
                     print(_id)
-                    print(input_pose)
+                    # print(input_pose)
                     if _id not in queue_map.keys():
                         queue_map[_id]=[]
                         
@@ -121,22 +123,22 @@ if __name__=="__main__":
                     else:
                         data_.append(input_pose)
                     
-                    # 改到這確認不是thread的問題
-                    queue = queue_map[_id]
+                    # # 改到這確認不是thread的問題
+                    # queue = queue_map[_id]
                         
-                    if len(queue)==100:
+                    # if len(queue)==100:
                            
-                        poses = np.array(queue)
-                            # start_time = time.time()
-                        result = model.sample(poses)
-                            # end_time = time.time()
-                            # header = [end_time-start_time]
+                    #     poses = np.array(queue)
+                    #         # start_time = time.time()
+                    #     result = model.sample(poses)
+                    #         # end_time = time.time()
+                    #         # header = [end_time-start_time]
                             
-                            # # print(result.shape)
-                            # print("Output")
-                            # print(_id)
-                            # print(result[0])
-                        sending(conn,_id,result)
+                    #         # # print(result.shape)
+                    #         # print("Output")
+                    #         # print(_id)
+                    #         # print(result[0])
+                    #     sending(conn,_id,result)
 
 
 
@@ -146,8 +148,8 @@ if __name__=="__main__":
                     break
 
             #end of handle client
-            # mlservice.doRun=False
-            # mlservice.join()
+            mlservice.doRun=False
+            mlservice.join()
 
         except socket.timeout:
             pass
